@@ -1,0 +1,11 @@
+{
+  "physics": {
+    "physics_type": "move",
+    "speed_m_per_sec": 1.5
+  },
+  "graphics": {
+    "frames_per_sec": 12,
+    "is_loop": true
+  },
+  "need_clear_path": false
+}
