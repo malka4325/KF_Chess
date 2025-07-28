@@ -1,4 +1,3 @@
-
 import pathlib
 from typing import Union, Tuple
 
@@ -10,6 +9,13 @@ class Img:
     def __init__(self):
         self.img = None
     
+    @classmethod
+    def create_blank(cls, width: int, height: int, color: Tuple[int, int, int, int] = (0, 0, 0, 255)):
+        """Create a blank RGBA image of specified size and color."""
+        new_img = cls()
+        new_img.img = np.full((height, width, 4), color, dtype=np.uint8)
+        return new_img
+
     def read(self, path: Union[str, pathlib.Path],
              size: Union[Tuple[int, int], None] = None,
              keep_aspect: bool = False,
@@ -40,6 +46,10 @@ class Img:
         if self.img is None:
             raise FileNotFoundError(f"Cannot load image: {path}")
 
+        # If image has 3 channels, convert to 4 for consistency (alpha=255)
+        if self.img.shape[2] == 3:
+            self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2BGRA)
+
         if size is not None:
             target_w, target_h = size
             h, w = self.img.shape[:2]
@@ -55,7 +65,7 @@ class Img:
             if self.img.shape[0] == 0 or self.img.shape[1] == 0:
                 raise ValueError(f"Invalid resized image: {self.img.shape} from {path}")
 
-            # print(f"[DEBUG] Resized {path} to {self.img.shape}")
+            # print(f"[DEBUG] Resized {path} to {self.img.shape}") # Commented out for cleaner output
 
         return self
 
@@ -68,42 +78,53 @@ class Img:
         if self.img is None or other_img.img is None:
             raise ValueError("Both images must be loaded before drawing.")
 
-        # Revert this section to its original form or closer to it
-        # The original code handled 3 vs 4 channels differently, simplifying to original intent:
-        # Convert to match other_img's channel count BEFORE slicing
-        if self.img.shape[2] != other_img.img.shape[2]:
-            if self.img.shape[2] == 3 and other_img.img.shape[2] == 4:
-                self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2BGRA)
-            elif self.img.shape[2] == 4 and other_img.img.shape[2] == 3:
-                self.img = cv2.cvtColor(self.img, cv2.COLOR_BGRA2BGR)
+        # Ensure consistent channel count for alpha blending
+        src_img_rgba = self.img
+        if src_img_rgba.shape[2] == 3: # If source is BGR, convert to BGRA (alpha=255)
+            src_img_rgba = cv2.cvtColor(self.img, cv2.COLOR_BGR2BGRA)
 
-        h, w = self.img.shape[:2]
+        h, w = src_img_rgba.shape[:2]
         H, W = other_img.img.shape[:2]
 
         if h == 0 or w == 0:
-            print(f"[WARN] Skipping draw: source image has 0 size: {self.img.shape}")
+            # print(f"[WARN] Skipping draw: source image has 0 size: {self.img.shape}") # Commented out
             return
 
+        # Check boundaries
         if y < 0 or x < 0 or y + h > H or x + w > W:
-            print(f"[WARN] Skipping draw at ({x},{y}): roi size {(h, w)} exceeds board {(H, W)}")
+            # print(f"[WARN] Skipping draw at ({x},{y}): roi size {(h, w)} exceeds board {(H, W)}") # Commented out
             return
 
+        # Get region of interest on the destination image
         roi = other_img.img[y:y + h, x:x + w]
 
-        if self.img.shape[2] == 4:
-            b, g, r, a = cv2.split(self.img)
-            mask = a / 255.0
-            for c in range(3):
-                roi[..., c] = (1 - mask) * roi[..., c] + mask * self.img[..., c]
-        else:
-            other_img.img[y:y + h, x:x + w] = self.img
+        # Split source image into channels and get alpha mask
+        b, g, r, a = cv2.split(src_img_rgba)
+        mask = a / 255.0
+
+        # Perform alpha blending for each color channel
+        for c in range(3): # BGR channels
+            roi[..., c] = (1 - mask) * roi[..., c] + mask * src_img_rgba[..., c]
+        
+        # Also blend the alpha channel if the destination has one
+        if other_img.img.shape[2] == 4:
+            other_img.img[y:y+h, x:x+w, 3] = (1 - mask) * other_img.img[y:y+h, x:x+w, 3] + mask * src_img_rgba[..., 3]
+
 
     def put_text(self, txt, x, y, font_size, color=(255, 255, 255, 255), thickness=1):
         if self.img is None:
             raise ValueError("Image not loaded.")
+        
+        # Ensure the color is BGR or BGRA depending on the image channels for putText
+        display_color = color
+        if self.img.shape[2] == 3 and len(color) == 4:
+            display_color = color[:3] # Use only BGR channels if destination is BGR
+        elif self.img.shape[2] == 4 and len(color) == 3:
+            display_color = (*color, 255) # Add alpha channel if destination is BGRA and color is BGR
+
         cv2.putText(self.img, txt, (x, y),
                     cv2.FONT_HERSHEY_SIMPLEX, font_size,
-                    color, thickness, cv2.LINE_AA)
+                    display_color, thickness, cv2.LINE_AA)
 
     def show(self):
         if self.img is None:

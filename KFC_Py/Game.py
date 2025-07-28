@@ -3,18 +3,14 @@ from typing import List, Dict, Tuple, Optional, Set
 from collections import defaultdict
 
 import cv2
-
 from Board import Board
 from Command import Command
-from img import Img
 from Piece import Piece
-from GraphicsFactory import GraphicsFactory
+from img import Img # ודא ש-Img מיובא
+# מהייבואים שהיו חסרים או שונו בגרסאות קודמות, וודא שקיימים:
+from KeyboardInput import KeyboardProcessor, KeyboardProducer 
+from GraphicsFactory import GraphicsFactory # אם בשימוש בפנים, ודא מיובא
 
-
-
-from KeyboardInput import KeyboardProcessor, KeyboardProducer
-
-# set up a module-level logger – real apps can configure handlers/levels
 logger = logging.getLogger(__name__)
 
 
@@ -26,15 +22,14 @@ class Game:
         if not self._validate(pieces):
             raise InvalidBoard("missing kings")
         self.pieces = pieces
-        self.board = board
-        self.pieces_root = pieces_root  # שמור את pieces_root לשימוש בקידום
+        self.board = board # זה יהיה כעת אובייקט ה-Board שמייצג רק את ה-checkerboard (512x512)
+        self.pieces_root = pieces_root
         self.graphics_factory = graphics_factory
         self.img_factory = img_factory
         self.START_NS = time.monotonic_ns()
-        self._time_factor = 1  # for tests
-        self.user_input_queue = queue.Queue()  # thread-safe
+        self._time_factor = 1
+        self.user_input_queue = queue.Queue()
 
-        # lookup tables ---------------------------------------------------
         self.pos: Dict[Tuple[int, int], List[Piece]] = defaultdict(list)
         self.piece_by_id: Dict[str, Piece] = {p.id: p for p in pieces}
 
@@ -43,16 +38,33 @@ class Game:
         self.last_cursor2: Optional[Tuple[int, int]] = None
         self.last_cursor1: Optional[Tuple[int, int]] = None
 
-        # keyboard helpers ---------------------------------------------------
         self.keyboard_processor: Optional[KeyboardProcessor] = None
         self.keyboard_producer: Optional[KeyboardProducer] = None
         
-        self.running = True # Keep this flag, it's for graceful exit
+        self.running = True
 
+        # **הגדרות עבור הקנבס הראשי (חלון המשחק המורחב) - זה שfull.jpg מצויר עליו**
+        full_bg_path = self.pieces_root / "full.jpg"
+        if not full_bg_path.exists():
+            raise FileNotFoundError(f"Missing background image: {full_bg_path}")
+        
+        # טען את full.jpg בגודלה המקורי
+        self.main_canvas = Img().read(full_bg_path, size=None, keep_aspect=False)
+        self.initial_main_canvas_img_data = self.main_canvas.img.copy() # שמור עותק מקורי לציור מחדש בכל פריים
+
+        self.canvas_width = self.main_canvas.img.shape[1] # רוחב החלון יהיה רוחב full.jpg (1280)
+        self.canvas_height = self.main_canvas.img.shape[0] # גובה החלון יהיה גובה full.jpg (720)
+
+        # קביעת אופסטים הלוח ביחס לקנבס הראשי - מבוסס על מיקום הלוח ב-full.jpg
+        # לפי התמונה, הלוח מתחיל בפיקסל (308, 98)
+        self.board_offset_x = 308 
+        self.board_offset_y = 98 
+        
     def game_time_ms(self) -> int:
         return self._time_factor * (time.monotonic_ns() - self.START_NS) // 1_000_000
 
     def clone_board(self) -> Board:
+        # פונקציה זו משמשת ליצירת עותק של אובייקט ה-Board (ה-checkerboard)
         return self.board.clone()
 
     def start_user_input_thread(self):
@@ -88,6 +100,7 @@ class Game:
             self.kp2._cursor = list(self.last_cursor2)
 
         # **pass the player number** as the 4th argument!
+        # ודא שהפרמטר הראשון הוא `self` (אובייקט ה-Game) כך ש-KeyboardProducer יכול לגשת לדגל `self.running`.
         self.kb_prod_1 = KeyboardProducer(self,
                                           self.user_input_queue,
                                           self.kp1,
@@ -100,6 +113,7 @@ class Game:
         self.kb_prod_1.start()
         self.kb_prod_2.start()
 
+
     def _update_cell2piece_map(self):
         self.pos.clear()
         for p in self.pieces:
@@ -107,7 +121,6 @@ class Game:
 
     def _run_game_loop(self, num_iterations=None, is_with_graphics=True):
         it_counter = 0
-        # Change loop condition to also check self.running
         while not self._is_win() and self.running: 
             now = self.game_time_ms()
 
@@ -122,7 +135,7 @@ class Game:
 
             if is_with_graphics:
                 self._draw()
-                self._show() # _show will now handle the close event
+                self._show()
 
             self._resolve_collisions()
 
@@ -133,64 +146,68 @@ class Game:
                     self.running = False # Stop the loop if iterations limit is reached
                     return
 
-
     def run(self, num_iterations=None, is_with_graphics=True):
         self.start_user_input_thread()
         start_ms = self.START_NS
         for p in self.pieces:
             p.reset(start_ms)
 
-        self.running = True # Ensure game starts as running
+        self.running = True
         self._run_game_loop(num_iterations, is_with_graphics)
 
         self._announce_win()
-        # Ensure keyboard threads are stopped when game stops
         if self.kb_prod_1 and self.kb_prod_1.is_alive():
             self.kb_prod_1.stop()
-            self.kb_prod_1.join(timeout=1) # Wait for the thread to finish
+            self.kb_prod_1.join(timeout=1)
         if self.kb_prod_2 and self.kb_prod_2.is_alive():
             self.kb_prod_2.stop()
-            self.kb_prod_2.join(timeout=1) # Wait for the thread to finish
-        cv2.destroyAllWindows() # Destroy all OpenCV windows upon exit
+            self.kb_prod_2.join(timeout=1)
+        cv2.destroyAllWindows()
+
 
     def _draw(self):
-        # Revert to original _draw logic
-        self.curr_board = self.clone_board()
-        for p in self.pieces:
-            p.draw_on_board(self.curr_board, now_ms=self.game_time_ms())
+        # צור קנבס חדש על בסיס תמונת הרקע המקורית (full.jpg) בכל פריים
+        self.main_canvas.img = self.initial_main_canvas_img_data.copy()
 
-        # overlay both players' cursors, but only log on change
+        # צייר את לוח השחמט הריק (board.png, בגודל 512x512) על הקנבס הראשי במיקום האופסט
+        self.board.img.draw_on(self.main_canvas, self.board_offset_x, self.board_offset_y)
+
+        # צייר את הכלים על הקנבס הראשי (main_canvas), בתוספת האופסט של הלוח
+        for p in self.pieces:
+            x_pix, y_pix = p.state.physics.get_pos_pix() # קואורדינטות אלה הן ביחס ללוח (0-511)
+            sprite = p.state.graphics.get_img()
+            
+            # צייר את הספרייט על הקנבס הראשי בתוספת אופסט הלוח
+            sprite.draw_on(self.main_canvas, self.board_offset_x + x_pix, self.board_offset_y + y_pix)
+
+        # צייר את הסמנים (cursors) על הקנבס הראשי, בתוספת האופסט
         if self.kp1 and self.kp2:
             for player, kp, last in (
                     (1, self.kp1, 'last_cursor1'),
                     (2, self.kp2, 'last_cursor2')
             ):
                 r, c = kp.get_cursor()
-                # draw rectangle
-                y1 = r * self.board.cell_H_pix
-                x1 = c * self.board.cell_W_pix
+                y1 = r * self.board.cell_H_pix + self.board_offset_y
+                x1 = c * self.board.cell_W_pix + self.board_offset_x
                 y2 = y1 + self.board.cell_H_pix - 1
                 x2 = x1 + self.board.cell_W_pix - 1
-                color = (0, 255, 0) if player == 1 else (255, 0, 0) # Original color tuple without alpha
-                self.curr_board.img.draw_rect(x1, y1, x2, y2, color)
+                color = (0, 255, 0, 255) if player == 1 else (255, 0, 0, 255) 
+                self.main_canvas.draw_rect(x1, y1, x2, y2, color)
 
-                # only print if moved
                 prev = getattr(self, last)
                 if prev != (r, c):
                     logger.debug("Marker P%s moved to (%s, %s)", player, r, c)
                     setattr(self, last, (r, c))
-    def _show(self):
-        # Display the extended canvas instead of the simple board image
-        cv2.imshow("KungFu Chess", self.board.img.img) # Give the window a name
-        key = cv2.waitKey(1) # Wait 1ms for a key press or window event
 
-        if key == 27: # ASCII for ESC key, often used to close windows
+    def _show(self):
+        cv2.imshow("KungFu Chess", self.main_canvas.img) # הצג את הקנבס הראשי
+        key = cv2.waitKey(1)
+
+        if key == 27:
             self.running = False
-        
-        # Check for window close event (clicking X button)
-        # This requires a named window. cv2.getWindowProperty returns -1 if window is closed.
         if cv2.getWindowProperty("KungFu Chess", cv2.WND_PROP_VISIBLE) < 1:
             self.running = False
+
 
     def _side_of(self, piece_id: str) -> str:
         return piece_id[1]
@@ -293,6 +310,7 @@ class Game:
                 to_promote.append((p, 'QB'))
         if to_promote:
             # השתמש ב-board, pieces_root, graphics_factory, img_factory מהאובייקט
+            from GraphicsFactory import GraphicsFactory
             gfx_factory = self.graphics_factory or (GraphicsFactory(self.img_factory) if self.img_factory else None)
             factory = PieceFactory(self.board, self.pieces_root, graphics_factory=gfx_factory)
             for pawn, queen_type in to_promote:
@@ -306,6 +324,7 @@ class Game:
                 self.piece_by_id[queen.id] = queen
                 if pawn.id in self.piece_by_id:
                     del self.piece_by_id[pawn.id]
+
 
     def _validate(self, pieces):
         """Ensure both kings present and no two pieces share a cell."""
@@ -335,9 +354,13 @@ class Game:
         text = f'{winner} wins!'
         logger.info(text)
 
-        # Try to use the current board image (after last move)
-        board_img = getattr(self, 'curr_board', self.board).img
-        # Get image size
+        # Try to use the current main canvas image (after last move)
+        board_img = getattr(self, 'main_canvas', None)
+        if board_img is None:
+            # Fallback to the checkerboard if main_canvas is not set (e.g. for tests without graphics)
+            board_img = self.board.img 
+
+        # Get image size from the displayed canvas
         h, w = board_img.img.shape[:2]
         # Dynamic font size and thickness
         font_size = min(w, h) / 400
@@ -348,7 +371,6 @@ class Game:
         x = (w - text_w) // 2
         y = (h + text_h) // 2
         # Draw the text in the center (red)
-        board_img.put_text(text, x, y, font_size, color=(144, 144, 254, 1), thickness=thickness)
+        board_img.put_text(text, x, y, font_size, color=(144, 144, 254, 255), thickness=thickness) # Add alpha channel to color tuple
         board_img.show()
         time.sleep(5)
-

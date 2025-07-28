@@ -3,7 +3,10 @@ from typing import Union
 from Board import Board
 from PieceFactory import PieceFactory
 from Game import Game
+from GraphicsFactory import ImgFactory # ודא ש-ImgFactory מיובא
 
+
+# הגדרת גודל התא בפיקסלים, מכאן יגזר גודל הלוח (8*64 = 512)
 CELL_PX = 77
 
 
@@ -19,16 +22,17 @@ def create_game(pieces_root: Union[str, pathlib.Path], img_factory) -> Game:
     if not board_csv.exists():
         raise FileNotFoundError(board_csv)
 
-    # Board image: use board.png beside this file if present, else blank RGBA
-    board_png = pieces_root / "full.jpg"
+    # טען את תמונת הלוח המקורי (checkerboard) וקבע את גודלה במפורש
+    board_png = pieces_root / "board.png"
     if not board_png.exists():
         raise FileNotFoundError(board_png)
 
     loader = img_factory
 
-    board_img = loader(board_png, None, keep_aspect=False)
+    board_img = loader(board_png, (CELL_PX*8, CELL_PX*8), keep_aspect=False)
 
-    board = Board(308,98,CELL_PX, CELL_PX, 8, 8, board_img)
+    # צור את אובייקט ה-Board
+    board = Board(CELL_PX, CELL_PX, 8, 8, board_img)
 
     from GraphicsFactory import GraphicsFactory
     gfx_factory = GraphicsFactory(img_factory)
@@ -41,6 +45,7 @@ def create_game(pieces_root: Union[str, pathlib.Path], img_factory) -> Game:
                 if code:
                     pieces.append(pf.create_piece(code, (r, c)))
 
+    # העבר את pieces_root ל-Game כדי לטעון שם את full.jpg
     game = Game(pieces, board, pieces_root=pieces_root, graphics_factory=gfx_factory, img_factory=img_factory)
     # Blue cursor (player 2) on top black pawn, green cursor (player 1) on bottom white pawn
     pb_cell = (1, 4)

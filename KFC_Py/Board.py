@@ -1,4 +1,3 @@
-
 from typing import Tuple
 from dataclasses import dataclass
 
@@ -6,19 +5,17 @@ from img import Img
 
 @dataclass
 class Board:
-    start_board_W: int
-    start_board_H: int
     cell_H_pix: int  # cell height in pixels
     cell_W_pix: int  # cell width in pixels
     W_cells: int     # num cells in width
     H_cells: int     # num cells in height
-    img: Img         # image of the board
+    img: Img         # image of the board (this will be the checkerboard)
     cell_H_m: float = 1.0  # cell height in meters (default 1.0 for back-compat)
     cell_W_m: float = 1.0  # cell width  in meters (default 1.0 for back-compat)
 
     # convenience, not required by dataclass
     def clone(self) -> "Board":
-        return Board(self.start_board_W,self.start_board_H,self.cell_H_pix, self.cell_W_pix,
+        return Board(self.cell_H_pix, self.cell_W_pix,
                      self.W_cells,    self.H_cells,
                      self.img.copy())
 
@@ -39,9 +36,9 @@ class Board:
         return c * self.cell_W_m, r * self.cell_H_m
 
     def m_to_pix(self, pos_m: Tuple[float, float]) -> Tuple[int, int]:
-        """Convert *(x, y)* in metres to pixel coordinates."""
+        """Convert *(x, y)* in metres to pixel coordinates relative to the board's (0,0)."""
         x_m, y_m = pos_m
-        x_px = int(round(x_m / self.cell_W_m * self.cell_W_pix+self.start_board_W))
-        y_px = int(round(y_m / self.cell_H_m * self.cell_H_pix)+self.start_board_H)
+        # הסר את הוספת האופסטים הקבועים שהיו כאן
+        x_px = int(round(x_m / self.cell_W_m * self.cell_W_pix))
+        y_px = int(round(y_m / self.cell_H_m * self.cell_H_pix))
         return x_px, y_px
-
