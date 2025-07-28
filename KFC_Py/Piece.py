@@ -11,9 +11,14 @@ class Piece:
         self.state = init_state
 
     def on_command(self, cmd: Command, cell2piece: Dict[Tuple[int, int], List["Piece"]]):
-        """Process a command and potentially transition to a new state."""
+        """
+        מעבד פקודה ועשוי לעבור למצב חדש.
+        מחזיר True אם מצב הכלי השתנה בהצלחה בעקבות הפקודה, False אחרת.
+        """
+        original_state = self.state # שמור את המצב המקורי
         my_color = self.id[1]
         self.state = self.state.on_command(cmd, cell2piece, my_color)
+        return self.state is not original_state # החזר True אם המצב אכן השתנה
 
     def reset(self, start_ms: int):
         cell = self.current_cell()

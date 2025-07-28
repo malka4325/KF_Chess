@@ -65,7 +65,7 @@ class State:
     def update(self, now_ms: int) -> State:
         internal = self.physics.update(now_ms)
         if internal:
-            logger.debug("[DBG] internal:", internal.type)
+            logger.debug("[DBG] internal: %s", internal.type)
             return self.on_command(internal, None)
         self.graphics.update(now_ms)
         return self
