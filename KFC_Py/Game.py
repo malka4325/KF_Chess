@@ -2,9 +2,14 @@ import queue, threading, time, math, logging
 from typing import List, Dict, Tuple, Optional, Set
 from collections import defaultdict
 
+import cv2
+
 from Board import Board
 from Command import Command
+from img import Img
 from Piece import Piece
+from GraphicsFactory import GraphicsFactory
+
 
 
 from KeyboardInput import KeyboardProcessor, KeyboardProducer
@@ -41,6 +46,8 @@ class Game:
         # keyboard helpers ---------------------------------------------------
         self.keyboard_processor: Optional[KeyboardProcessor] = None
         self.keyboard_producer: Optional[KeyboardProducer] = None
+        
+        self.running = True # Keep this flag, it's for graceful exit
 
     def game_time_ms(self) -> int:
         return self._time_factor * (time.monotonic_ns() - self.START_NS) // 1_000_000
@@ -100,7 +107,8 @@ class Game:
 
     def _run_game_loop(self, num_iterations=None, is_with_graphics=True):
         it_counter = 0
-        while not self._is_win():
+        # Change loop condition to also check self.running
+        while not self._is_win() and self.running: 
             now = self.game_time_ms()
 
             for p in self.pieces:
@@ -114,7 +122,7 @@ class Game:
 
             if is_with_graphics:
                 self._draw()
-                self._show()
+                self._show() # _show will now handle the close event
 
             self._resolve_collisions()
 
@@ -122,7 +130,9 @@ class Game:
             if num_iterations is not None:
                 it_counter += 1
                 if num_iterations <= it_counter:
+                    self.running = False # Stop the loop if iterations limit is reached
                     return
+
 
     def run(self, num_iterations=None, is_with_graphics=True):
         self.start_user_input_thread()
@@ -130,14 +140,21 @@ class Game:
         for p in self.pieces:
             p.reset(start_ms)
 
+        self.running = True # Ensure game starts as running
         self._run_game_loop(num_iterations, is_with_graphics)
 
         self._announce_win()
-        if self.kb_prod_1:
+        # Ensure keyboard threads are stopped when game stops
+        if self.kb_prod_1 and self.kb_prod_1.is_alive():
             self.kb_prod_1.stop()
+            self.kb_prod_1.join(timeout=1) # Wait for the thread to finish
+        if self.kb_prod_2 and self.kb_prod_2.is_alive():
             self.kb_prod_2.stop()
+            self.kb_prod_2.join(timeout=1) # Wait for the thread to finish
+        cv2.destroyAllWindows() # Destroy all OpenCV windows upon exit
 
     def _draw(self):
+        # Revert to original _draw logic
         self.curr_board = self.clone_board()
         for p in self.pieces:
             p.draw_on_board(self.curr_board, now_ms=self.game_time_ms())
@@ -154,7 +171,7 @@ class Game:
                 x1 = c * self.board.cell_W_pix
                 y2 = y1 + self.board.cell_H_pix - 1
                 x2 = x1 + self.board.cell_W_pix - 1
-                color = (0, 255, 0) if player == 1 else (255, 0, 0)
+                color = (0, 255, 0) if player == 1 else (255, 0, 0) # Original color tuple without alpha
                 self.curr_board.img.draw_rect(x1, y1, x2, y2, color)
 
                 # only print if moved
@@ -162,9 +179,18 @@ class Game:
                 if prev != (r, c):
                     logger.debug("Marker P%s moved to (%s, %s)", player, r, c)
                     setattr(self, last, (r, c))
-
     def _show(self):
-        self.curr_board.show()
+        # Display the extended canvas instead of the simple board image
+        cv2.imshow("KungFu Chess", self.board.img.img) # Give the window a name
+        key = cv2.waitKey(1) # Wait 1ms for a key press or window event
+
+        if key == 27: # ASCII for ESC key, often used to close windows
+            self.running = False
+        
+        # Check for window close event (clicking X button)
+        # This requires a named window. cv2.getWindowProperty returns -1 if window is closed.
+        if cv2.getWindowProperty("KungFu Chess", cv2.WND_PROP_VISIBLE) < 1:
+            self.running = False
 
     def _side_of(self, piece_id: str) -> str:
         return piece_id[1]
@@ -267,7 +293,6 @@ class Game:
                 to_promote.append((p, 'QB'))
         if to_promote:
             # השתמש ב-board, pieces_root, graphics_factory, img_factory מהאובייקט
-            from GraphicsFactory import GraphicsFactory
             gfx_factory = self.graphics_factory or (GraphicsFactory(self.img_factory) if self.img_factory else None)
             factory = PieceFactory(self.board, self.pieces_root, graphics_factory=gfx_factory)
             for pawn, queen_type in to_promote:

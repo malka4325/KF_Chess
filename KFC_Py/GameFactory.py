@@ -4,7 +4,7 @@ from Board import Board
 from PieceFactory import PieceFactory
 from Game import Game
 
-CELL_PX = 64
+CELL_PX = 77
 
 
 def create_game(pieces_root: Union[str, pathlib.Path], img_factory) -> Game:
@@ -20,15 +20,15 @@ def create_game(pieces_root: Union[str, pathlib.Path], img_factory) -> Game:
         raise FileNotFoundError(board_csv)
 
     # Board image: use board.png beside this file if present, else blank RGBA
-    board_png = pieces_root / "board.png"
+    board_png = pieces_root / "full.jpg"
     if not board_png.exists():
         raise FileNotFoundError(board_png)
 
     loader = img_factory
 
-    board_img = loader(board_png, (CELL_PX*8, CELL_PX*8), keep_aspect=False)
+    board_img = loader(board_png, None, keep_aspect=False)
 
-    board = Board(CELL_PX, CELL_PX, 8, 8, board_img)
+    board = Board(308,98,CELL_PX, CELL_PX, 8, 8, board_img)
 
     from GraphicsFactory import GraphicsFactory
     gfx_factory = GraphicsFactory(img_factory)

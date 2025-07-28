@@ -28,6 +28,12 @@ class Piece:
     def draw_on_board(self, board, now_ms: int):
         x, y = self.state.physics.get_pos_pix()
         sprite = self.state.graphics.get_img()
+                # Add this debug print:
+        if sprite is None or sprite.img is None or sprite.img.size == 0:
+            print(f"DEBUG: Piece {self.id} has no valid image to draw.")
+        else:
+            print(f"DEBUG: Drawing piece {self.id} at ({x}, {y}) with image shape {sprite.img.shape}")
+
         sprite.draw_on(board.img, x, y)  # <-- paste the piece
 
     # ────────────────────────────────────────────────────────────────────

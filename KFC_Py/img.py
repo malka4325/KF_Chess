@@ -55,7 +55,7 @@ class Img:
             if self.img.shape[0] == 0 or self.img.shape[1] == 0:
                 raise ValueError(f"Invalid resized image: {self.img.shape} from {path}")
 
-            print(f"[DEBUG] Resized {path} to {self.img.shape}")
+            # print(f"[DEBUG] Resized {path} to {self.img.shape}")
 
         return self
 
@@ -68,6 +68,8 @@ class Img:
         if self.img is None or other_img.img is None:
             raise ValueError("Both images must be loaded before drawing.")
 
+        # Revert this section to its original form or closer to it
+        # The original code handled 3 vs 4 channels differently, simplifying to original intent:
         # Convert to match other_img's channel count BEFORE slicing
         if self.img.shape[2] != other_img.img.shape[2]:
             if self.img.shape[2] == 3 and other_img.img.shape[2] == 4:

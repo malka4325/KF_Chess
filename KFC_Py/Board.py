@@ -6,6 +6,8 @@ from img import Img
 
 @dataclass
 class Board:
+    start_board_W: int
+    start_board_H: int
     cell_H_pix: int  # cell height in pixels
     cell_W_pix: int  # cell width in pixels
     W_cells: int     # num cells in width
@@ -16,7 +18,7 @@ class Board:
 
     # convenience, not required by dataclass
     def clone(self) -> "Board":
-        return Board(self.cell_H_pix, self.cell_W_pix,
+        return Board(self.start_board_W,self.start_board_H,self.cell_H_pix, self.cell_W_pix,
                      self.W_cells,    self.H_cells,
                      self.img.copy())
 
@@ -39,7 +41,7 @@ class Board:
     def m_to_pix(self, pos_m: Tuple[float, float]) -> Tuple[int, int]:
         """Convert *(x, y)* in metres to pixel coordinates."""
         x_m, y_m = pos_m
-        x_px = int(round(x_m / self.cell_W_m * self.cell_W_pix))
-        y_px = int(round(y_m / self.cell_H_m * self.cell_H_pix))
+        x_px = int(round(x_m / self.cell_W_m * self.cell_W_pix+self.start_board_W))
+        y_px = int(round(y_m / self.cell_H_m * self.cell_H_pix)+self.start_board_H)
         return x_px, y_px
 
