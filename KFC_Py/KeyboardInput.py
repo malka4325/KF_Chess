@@ -1,10 +1,8 @@
-
 import threading, logging
-import time
-from time import time
 import keyboard  # pip install keyboard
 from Command import Command
 from typing import Dict, Tuple
+import time # **הוסף שורה זו כאן**
 
 logger = logging.getLogger(__name__)
 
@@ -68,33 +66,19 @@ class KeyboardProducer(threading.Thread):
         self.player = player
         self.selected_id = None
         self.selected_cell = None
-        self._stop_event = threading.Event() # Event to signal thread to stop
 
     def run(self):
+        # Install our hook; it stays active until we call keyboard.unhook_all()
         keyboard.hook(self._on_event)
         # Change to loop while game is running
-        while not self._stop_event.is_set():
-            # A small sleep to prevent busy-waiting if there are no events
-            time.sleep(0.01) # Sleep to yield CPU and allow stop_event to be checked
-            
-            # The keyboard.wait() needs to be handled carefully in a thread.
-            # Directly using keyboard.wait() will block indefinitely.
-            # Instead, rely on the global hook and check the stop event.
-            # The actual key processing happens in _on_event via the hook.
-            # We just need to keep this thread alive and responsive to stop signals.
-            
-            # If a more immediate stop is needed, you might need to find a non-blocking
-            # way to wait for keyboard events or break the keyboard.wait()
-            # For now, relying on the 'daemon' property and stop_event.
-            
-            # Since keyboard.wait() blocks, we cannot just loop while not _stop_event.is_set()
-            # if keyboard.wait() is inside. The solution is to remove keyboard.wait()
-            # and let the hook handle events, while the main thread manages life cycle.
-            # The daemon thread will exit when the main program exits.
-            pass # Keep looping and relying on main thread to manage `running` flag in Game
-
+        while self.game.running: # Loop while the game's running flag is True
+            time.sleep(0.01) # Sleep to yield CPU and allow main thread to process events
+            # Note: keyboard.wait() is removed from here as it blocks indefinitely.
+            # The keyboard.hook + a loop with sleep is the correct non-blocking pattern for threads.
+        
         keyboard.unhook_all() # Unhook when thread is told to stop
         logger.info(f"KeyboardProducer for Player {self.player} stopped.")
+
 
     def _find_piece_at(self, cell):
         for p in self.game.pieces:
@@ -103,6 +87,7 @@ class KeyboardProducer(threading.Thread):
         return None
 
     def _on_event(self, event):
+        # Only process if the game is still running (check the Game instance's running flag)
         if not self.game.running:
             return
 
@@ -173,9 +158,6 @@ class KeyboardProducer(threading.Thread):
                 logger.info(f"Player{self.player} queued {cmd}")
                 self.selected_id = None
                 self.selected_cell = None
+
     def stop(self):
-        self._stop_event.set() # Signal the thread to stop
-        # In KeyboardProducer's run method, keyboard.wait() is used, which blocks the thread.
-        # Calling unhook_all() from another thread will cause keyboard.wait() to unblock.
-        # Thus, simply setting the event and then calling unhook_all directly should work.
-        keyboard.unhook_all() # This will unblock keyboard.wait() if it's running
+        keyboard.unhook_all()

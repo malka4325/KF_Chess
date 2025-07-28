@@ -26,7 +26,7 @@ class Graphics:
         self.start_ms = 0
         self.cur_frame = 0
         self.frame_duration_ms = 1000 / fps
-        logger.debug(f"[LOAD] Graphics from: {sprites_folder}")
+        # logger.debug(f"[LOAD] Graphics from: {sprites_folder}")
 
     def copy(self):
         # shallow copy is enough: frames list is immutable PNGs

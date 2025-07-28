@@ -1,3 +1,5 @@
+# KFC_Py/Game.py
+
 import queue, threading, time, math, logging
 from typing import List, Dict, Tuple, Optional, Set
 from collections import defaultdict
@@ -9,12 +11,12 @@ from Piece import Piece
 from img import Img
 from KeyboardInput import KeyboardProcessor, KeyboardProducer 
 from GraphicsFactory import GraphicsFactory 
+from pygame import mixer
 
-# ייבוא המחלקות Publisher ו-Observer מהקובץ החדש
 from EventSystem import Publisher, Observer 
-# ייבוא מחלקת ScoreDisplay מהקובץ החדש
-from GameObservers import ScoreDisplay
-from GameObservers import MoveListDisplay 
+from GameObservers import ScoreDisplay 
+from GameObservers import MoveListDisplay
+from GameObservers import SoundPlayer 
 
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,6 @@ logger = logging.getLogger(__name__)
 class InvalidBoard(Exception): ...
 
 
-
-  
 class Game(Publisher):
     def __init__(self, pieces: List[Piece], board: Board, pieces_root=None, graphics_factory=None, img_factory=None):
         super().__init__()
@@ -67,15 +67,19 @@ class Game(Publisher):
         
         # יצירת מופע של ScoreDisplay ורישומו ל-Publisher (כלומר, Game)
         p1_score_display_pos = (50, 50) 
-        p2_score_display_pos = (self.canvas_width - 200, 50) 
+        p2_score_display_pos = (self.canvas_width - 350, 50) 
         self.score_display = ScoreDisplay(self, p1_score_display_pos, p2_score_display_pos)
         self.subscribe(self.score_display)
 
-        # **יצירת מופע של MoveListDisplay עם מיקומים נפרדים**
-        p1_movelist_display_pos = (50, 100) # מיקום לרשימת מהלכים של שחקן 1 (שמאל)
-        p2_movelist_display_pos = (self.canvas_width - 200, 100) # מיקום לרשימת מהלכים של שחקן 2 (ימין)
+        # יצירת מופע של MoveListDisplay ורישומו ל-Publisher
+        p1_movelist_display_pos = (50, 130) 
+        p2_movelist_display_pos = (self.canvas_width - 300, 130) 
         self.move_list_display = MoveListDisplay(p1_movelist_display_pos, p2_movelist_display_pos)
         self.subscribe(self.move_list_display)
+
+        sounds_folder_path = self.pieces_root / "sounds" 
+        self.sound_player = SoundPlayer(sounds_folder_path)
+        self.subscribe(self.sound_player)
 
 
     def game_time_ms(self) -> int:
@@ -132,14 +136,7 @@ class Game(Publisher):
 
             while not self.user_input_queue.empty():
                 cmd: Command = self.user_input_queue.get()
-                # # פרסום אירוע תנועה - הועבר לכאן
-                # if cmd.type == "move" and len(cmd.params) == 2:
-                #     self.notify("piece_moved", 
-                #                 piece_id=cmd.piece_id, 
-                #                 from_cell=cmd.params[0], 
-                #                 to_cell=cmd.params[1], 
-                #                 player=cmd.player, 
-                #                 timestamp=self.game_time_ms())
+                
                 self._process_input(cmd)
 
             if is_with_graphics:
@@ -154,6 +151,7 @@ class Game(Publisher):
                     self.running = False
                     return
 
+    
     def run(self, num_iterations=None, is_with_graphics=True):
         self.start_user_input_thread()
         start_ms = self.START_NS
@@ -166,7 +164,7 @@ class Game(Publisher):
         self._run_game_loop(num_iterations, is_with_graphics)
 
         self._announce_win()
-        self.notify("game_end", timestamp=self.game_time_ms())
+        self.notify("game_end", timestamp=self.game_time_ms()) 
 
         if self.kb_prod_1 and self.kb_prod_1.is_alive():
             self.kb_prod_1.stop()
@@ -174,8 +172,9 @@ class Game(Publisher):
         if self.kb_prod_2 and self.kb_prod_2.is_alive():
             self.kb_prod_2.stop()
             self.kb_prod_2.join(timeout=1)
+        
         cv2.destroyAllWindows()
-
+        mixer.quit() # **הוסף שורה זו - סגור את המיקסר של Pygame בסיום המשחק**
 
     def _draw(self):
         self.main_canvas.img = self.initial_main_canvas_img_data.copy()
@@ -207,7 +206,6 @@ class Game(Publisher):
                     setattr(self, last, (r, c))
 
         self.score_display.draw(self.main_canvas)
-        # **קריאה למתודת הציור של MoveListDisplay**
         self.move_list_display.draw(self.main_canvas)
 
 
@@ -223,6 +221,7 @@ class Game(Publisher):
 
     def _side_of(self, piece_id: str) -> str:
         return piece_id[1]
+
     def _process_input(self, cmd: Command):
         mover = self.piece_by_id.get(cmd.piece_id)
         if not mover:
@@ -239,24 +238,20 @@ class Game(Publisher):
 
         move_successful_in_state_machine = mover.on_command(cmd, self.pos)
 
-        # *** הדפסות Debug חדשות וחשובות כאן ***
-        print(f"DEBUG_PROCESS_INPUT: Piece: {cmd.piece_id}, Command Type: '{cmd.type}', "
-              f"Move Successful in State Machine: {move_successful_in_state_machine}, "
-              f"Is Command Type 'move' or 'jump'?: {cmd.type in ['move', 'jump']}")
-        # *** סוף הדפסות DEBUG חדשות ***
-
+        # פרסם אירוע אם המהלך חוקי
         if move_successful_in_state_machine and cmd.type in ["move", "jump"]:
-            self.notify("piece_moved", 
+            # השתמש ב-cmd.type כסוג האירוע כדי לנגן צליל ספציפי (move/jump)
+            self.notify(cmd.type, 
                         piece_id=cmd.piece_id, 
                         from_cell=original_cell, 
                         to_cell=cmd.params[1] if len(cmd.params) > 1 else None, 
                         player=player, 
                         timestamp=self.game_time_ms())
-            logger.info(f"Published piece_moved: {cmd.piece_id} from {original_cell} to {cmd.params[1] if len(cmd.params) > 1 else 'N/A'}")
-            print(f"*** DEBUG: Game successfully published 'piece_moved' event for {cmd.piece_id}! ***")
+            logger.info(f"Published {cmd.type}: {cmd.piece_id} from {original_cell} to {cmd.params[1] if len(cmd.params) > 1 else 'N/A'}")
+            print(f"*** DEBUG: Game successfully published '{cmd.type}' event for {cmd.piece_id}! ***")
         else:
             logger.debug(f"Move for {cmd.piece_id} (cmd type: {cmd.type}) was not successful by state machine or not a move/jump type.")
-            print(f"DEBUG: Game did NOT publish 'piece_moved' event for {cmd.piece_id} (state machine rejected or not a move/jump).")
+            print(f"DEBUG: Game did NOT publish '{cmd.type}' event for {cmd.piece_id} (state machine rejected or not a move/jump).")
 
     def _resolve_collisions(self):
         self._update_cell2piece_map()
