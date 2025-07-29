@@ -11,10 +11,9 @@ from Piece import Piece
 from img import Img
 from KeyboardInput import KeyboardProcessor, KeyboardProducer 
 from GraphicsFactory import GraphicsFactory 
-from pygame import mixer
 
 from EventSystem import Publisher, Observer 
-from GameObservers import ScoreDisplay 
+from GameObservers import ScoreDisplay, TextOverlayDisplay 
 from GameObservers import MoveListDisplay
 from GameObservers import SoundPlayer 
 
@@ -76,6 +75,15 @@ class Game(Publisher):
         p2_movelist_display_pos = (self.canvas_width - 300, 130) 
         self.move_list_display = MoveListDisplay(p1_movelist_display_pos, p2_movelist_display_pos)
         self.subscribe(self.move_list_display)
+        welcome_text = "Welcome to KungFu Chess!"
+        goodbye_text = "Thanks for playing! Game Over."
+        text_display_pos = (self.canvas_width // 2, self.canvas_height // 2) # מרכז המסך
+        self.text_overlay_display = TextOverlayDisplay(self, text_display_pos, welcome_text, goodbye_text, duration_ms=3000)
+        self.subscribe(self.text_overlay_display)
+                # יצירת חלון המשחק הראשי ומיקומו
+        self.game_window_name = "KungFu Chess"
+        cv2.namedWindow(self.game_window_name, cv2.WINDOW_AUTOSIZE) 
+        cv2.moveWindow(self.game_window_name, 0, 0) 
 
         sounds_folder_path = self.pieces_root / "sounds" 
         self.sound_player = SoundPlayer(sounds_folder_path)
@@ -151,7 +159,6 @@ class Game(Publisher):
                     self.running = False
                     return
 
-    
     def run(self, num_iterations=None, is_with_graphics=True):
         self.start_user_input_thread()
         start_ms = self.START_NS
@@ -159,11 +166,12 @@ class Game(Publisher):
             p.reset(start_ms)
 
         self.running = True
-        self.notify("game_start", timestamp=self.game_time_ms()) 
+        self.notify("game_start", timestamp=self.game_time_ms()) # פרסום אירוע game_start
 
         self._run_game_loop(num_iterations, is_with_graphics)
 
         self._announce_win()
+
         self.notify("game_end", timestamp=self.game_time_ms()) 
 
         if self.kb_prod_1 and self.kb_prod_1.is_alive():
@@ -174,7 +182,8 @@ class Game(Publisher):
             self.kb_prod_2.join(timeout=1)
         
         cv2.destroyAllWindows()
-        mixer.quit() # **הוסף שורה זו - סגור את המיקסר של Pygame בסיום המשחק**
+        # mixer.quit() # סגור את המיקסר של Pygame בסיום המשחק
+
 
     def _draw(self):
         self.main_canvas.img = self.initial_main_canvas_img_data.copy()
@@ -207,6 +216,9 @@ class Game(Publisher):
 
         self.score_display.draw(self.main_canvas)
         self.move_list_display.draw(self.main_canvas)
+                
+        # הקריאה למתודת הציור של TextOverlayDisplay
+        self.text_overlay_display.draw(self.main_canvas)
 
 
     def _show(self):
@@ -366,20 +378,47 @@ class Game(Publisher):
 
     def _announce_win(self):
         winner = 'Black' if any(p.id.startswith('KB') for p in self.pieces) else 'White'
-        text = f'{winner} wins!'
-        logger.info(text)
+        text_winner = f'{winner} wins!'
+        text_game_over = "GAME OVER!" 
 
-        board_img = getattr(self, 'main_canvas', None)
-        if board_img is None:
-            board_img = self.board.img 
+        logger.info(text_game_over + " " + text_winner) 
 
-        h, w = board_img.img.shape[:2]
-        font_size = min(w, h) / 400
-        thickness = 3
-        text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_size, thickness)
-        text_w, text_h = text_size
-        x = (w - text_w) // 2
-        y = (h + text_h) // 2
-        board_img.put_text(text, x, y, font_size, color=(144, 144, 254, 255), thickness=thickness)
-        board_img.show()
-        time.sleep(5)
+        win_screen_canvas = self.main_canvas.copy() # יצירת עותק
+
+        self.board.img.draw_on(win_screen_canvas, self.board_offset_x, self.board_offset_y) # ציור לוח השחמט
+
+        h, w = win_screen_canvas.img.shape[:2] 
+        font_size_go = 2.5 
+        thickness_go = 5
+        text_size_go, _ = cv2.getTextSize(text_game_over, cv2.FONT_HERSHEY_SIMPLEX, font_size_go, thickness_go)
+        text_w_go, text_h_go = text_size_go
+        x_go = (w - text_w_go) // 2 
+        y_go = (h // 2) - (text_h_go // 2) - 30 
+        
+        win_screen_canvas.put_text(text_game_over, x_go, y_go, font_size_go, color=(0, 0, 255, 255), thickness=thickness_go) 
+
+        font_size_win = min(w, h) / 400 
+        thickness_win = 3
+        text_size_win, _ = cv2.getTextSize(text_winner, cv2.FONT_HERSHEY_SIMPLEX, font_size_win, thickness_win)
+        text_w_win, text_h_win = text_size_win
+        x_win = (w - text_w_win) // 2 
+        y_win = (h // 2) + (text_h_win // 2) + 30 
+        
+        win_screen_canvas.put_text(text_winner, x_win, y_win, font_size_win, color=(144, 144, 254, 255), thickness=thickness_win) 
+        
+        # הצגת המסך הסופי על חלון המשחק הראשי
+        cv2.imshow(self.game_window_name, win_screen_canvas.img) 
+        
+        # **החלף את time.sleep(5) בלולאה עם cv2.waitKey(1) **
+        start_time_ms = time.monotonic_ns() // 1_000_000 # זמן התחלה במילישניות
+        duration_ms = 5000 # 5 שניות
+
+        while (time.monotonic_ns() // 1_000_000 - start_time_ms) < duration_ms:
+            if cv2.getWindowProperty(self.game_window_name, cv2.WND_PROP_VISIBLE) < 1:
+                self.running = False
+                break
+            key = cv2.waitKey(1) & 0xFF # קח קלט מקלדת, והשאר את החלון פעיל
+            if key == 27:
+                # אפשר למשתמש לסגור את החלון מוקדם יותר (בלחיצת ESC או X)
+                self.running = False
+                break

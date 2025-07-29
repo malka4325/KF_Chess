@@ -56,6 +56,7 @@ class ScoreDisplay(Observer):
             self.scores = {'W': 0, 'B': 0}
             logger.info("Game started, scores reset.")
         elif event_type == "game_end":
+            
             logger.info(f"Game ended. Final Score: White: {self.scores['W']}, Black: {self.scores['B']}")
 
 
@@ -201,3 +202,71 @@ class SoundPlayer(Observer):
         sound_obj = self.sounds.get(event_type) 
         if sound_obj: # ודא שאובייקט הצליל קיים (כלומר, נטען בהצלחה)
             self._play_sound_async(sound_obj)
+
+
+class TextOverlayDisplay(Observer):
+    """
+    Observer המציג כיתובים מעניינים בתחילת ובסיום המשחק.
+    """
+    def __init__(self, game_instance, display_pos: Tuple[int, int], welcome_text: str, goodbye_text: str, duration_ms: int = 3000):
+        self.game = game_instance
+        self.display_pos = display_pos
+        self.welcome_text = welcome_text
+        self.goodbye_text = goodbye_text
+        self.duration_ms = duration_ms # משך הצגת הטקסט במילישניות
+
+        self.current_text = ""
+        self.is_visible = False
+        self.display_start_time = 0 # זמן תחילת הצגת הטקסט
+
+        logger.info("TextOverlayDisplay initialized and subscribed.")
+
+    def update(self, event_type: str, *args, **kwargs):
+        timestamp = kwargs.get('timestamp', self.game.game_time_ms()) # השתמש בזמן האירוע או בזמן המשחק
+
+        if event_type == "game_start":
+            self.current_text = self.welcome_text
+            self.is_visible = True
+            self.display_start_time = timestamp
+            logger.info(f"Displaying welcome text: '{self.welcome_text}'")
+        elif event_type == "game_end":
+            self.current_text = self.goodbye_text
+            self.is_visible = True
+            self.display_start_time = timestamp
+            logger.info(f"Displaying goodbye text: '{self.goodbye_text}'")
+
+    def draw(self, canvas: Img):
+        # **הדפסת Debug חדשה בתחילת מתודת draw**
+        
+        if not self.is_visible:
+            return
+
+        # חשב כמה זמן עבר מאז שהטקסט התחיל להופיע
+        elapsed_time = self.game.game_time_ms() - self.display_start_time
+
+        if elapsed_time > self.duration_ms:
+            self.is_visible = False # הטקסט נעלם לאחר משך הזמן שהוגדר
+            self.current_text = ""
+            return
+
+        # אם הטקסט עדיין אמור להיות מוצג, צייר אותו
+        font_size = 2.0 # גודל גופן גדול יותר לכיתובים מרכזיים
+        thickness = 4
+        text_color = (0, 0, 255, 255) 
+        
+        # מרכז את הטקסט
+        text_size, _ = cv2.getTextSize(self.current_text, cv2.FONT_HERSHEY_SIMPLEX, font_size, thickness)
+        text_w, text_h = text_size
+        
+        canvas_center_x = self.game.canvas_width // 2
+        canvas_center_y = self.game.canvas_height // 2
+
+        x = canvas_center_x - (text_w // 2)
+        y = canvas_center_y + (text_h // 2) 
+
+        # **הדפסת Debug חדשה עם מיקום וגודל הטקסט**
+        print(f"DEBUG TextOverlay: Drawing text '{self.current_text}' at canvas_pos=({x}, {y}), text_size=({text_w}, {text_h}), font_size={font_size}")
+        canvas.put_text(self.current_text, x, y, font_size, color=text_color, thickness=thickness)
+
+
+
