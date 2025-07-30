@@ -8,8 +8,8 @@ from pathlib import Path
 
 import cv2
 import pygame
-from EventSystem import Observer
-from img import Img
+from client.EventSystem import Observer
+from client.img import Img
 
 try:
     import pygame.mixer as mixer # **שנה שורה זו**

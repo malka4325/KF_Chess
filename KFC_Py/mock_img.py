@@ -2,7 +2,7 @@
 
 import pathlib, cv2
 from typing import List, Tuple
-from img import Img
+from client.img import Img
 
 class MockImg(Img):
     """Headless Img that just records calls."""

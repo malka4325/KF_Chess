@@ -3,8 +3,8 @@ import json
 import os
 import sys
 from typing import List, Dict
-from EventSystem import Observer
-from Game import Game
+from client.EventSystem import Observer
+from server.Game import Game
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.join(current_dir, 'KFC_Py')

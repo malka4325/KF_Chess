@@ -1,15 +1,15 @@
 import pathlib
 import numpy as np
 
-from Board import Board
+from client.Board import Board
 from Command import Command
-from img import Img
-from Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics
-from State import State
-from Piece import Piece
+from client.img import Img
+from server.Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics
+from server.State import State
+from server.Piece import Piece
 # Adapt graphics builder to utilise mock image loader
-from Graphics import Graphics
-from GraphicsFactory import MockImgFactory
+from client.Graphics import Graphics
+from client.GraphicsFactory import MockImgFactory
 
 PIECES_ROOT = pathlib.Path(__file__).parent.parent.parent / "pieces"
 SPRITES_DIR = PIECES_ROOT / "BB" / "states" / "idle" / "sprites"

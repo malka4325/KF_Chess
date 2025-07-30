@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import math, logging
 
 from Command import Command
-from Board import Board
+from client.Board import Board
 import numpy as np
 
 logger = logging.getLogger(__name__)

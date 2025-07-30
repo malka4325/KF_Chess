@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock, MagicMock # נשתמש ב-Mock ליצירת Observers מדומים
 
-from EventSystem import Publisher, Observer
+from client.EventSystem import Publisher, Observer
 
 
 # מחלקת Mock Observer פשוטה לבדיקה

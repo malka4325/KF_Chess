@@ -4,13 +4,13 @@ import csv, json, pathlib
 from plistlib import InvalidFileException
 from typing import Dict, Tuple
 
-from Board import Board
+from client.Board import Board
 from Command import Command
-from GraphicsFactory import GraphicsFactory
-from Moves import Moves
-from PhysicsFactory import PhysicsFactory
-from Piece import Piece
-from State import State
+from client.GraphicsFactory import GraphicsFactory
+from server.Moves import Moves
+from server.PhysicsFactory import PhysicsFactory
+from server.Piece import Piece
+from server.State import State
 
 
 class PieceFactory:

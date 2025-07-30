@@ -5,17 +5,17 @@ from typing import List, Dict, Tuple, Optional, Set
 from collections import defaultdict
 
 import cv2
-from Board import Board
+from client.Board import Board
 from Command import Command
-from Piece import Piece
-from img import Img
-from KeyboardInput import KeyboardProcessor, KeyboardProducer 
-from GraphicsFactory import GraphicsFactory 
+from server.Piece import Piece
+from client.img import Img
+from client.KeyboardInput import KeyboardProcessor, KeyboardProducer 
+from client.GraphicsFactory import GraphicsFactory 
 
-from EventSystem import Publisher, Observer 
-from GameObservers import ScoreDisplay, TextOverlayDisplay 
-from GameObservers import MoveListDisplay
-from GameObservers import SoundPlayer 
+from client.EventSystem import Publisher, Observer 
+from client.GameObservers import ScoreDisplay, TextOverlayDisplay 
+from client.GameObservers import MoveListDisplay
+from client.GameObservers import SoundPlayer 
 
 
 logger = logging.getLogger(__name__)
@@ -328,7 +328,7 @@ class Game(Publisher):
 
 
         # --- Pawn Promotion ---
-        from PieceFactory import PieceFactory # ייבוא כאן כדי למנוע תלות מעגלית
+        from server.PieceFactory import PieceFactory # ייבוא כאן כדי למנוע תלות מעגלית
         to_promote = []
         for p in list(self.pieces):
             if p.id.startswith('PW') and p.current_cell()[0] == 0:

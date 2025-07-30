@@ -1,16 +1,16 @@
 import pathlib, queue
 import numpy as np
 
-from Board import Board
+from client.Board import Board
 from Command import Command
-from Game import Game, InvalidBoard
-from Piece import Piece
-from State import State
-from Physics import IdlePhysics, MovePhysics, JumpPhysics
-from Graphics import Graphics
-from GraphicsFactory import MockImgFactory
-from img import Img
-from Moves import Moves
+from server.Game import Game, InvalidBoard
+from server.Piece import Piece
+from server.State import State
+from server.Physics import IdlePhysics, MovePhysics, JumpPhysics
+from client.Graphics import Graphics
+from client.GraphicsFactory import MockImgFactory
+from client.img import Img
+from server.Moves import Moves
 from typing import Tuple
 
 ROOT_DIR = pathlib.Path(__file__).parent.parent.parent

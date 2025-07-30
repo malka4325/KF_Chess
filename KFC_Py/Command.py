@@ -1,6 +1,12 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 
+from enum import Enum
+
+class GameEvent(Enum):
+    MOVE = "move"
+    JUMP = "jump"
+    
 @dataclass
 class Command:
     timestamp: int          # ms since game start
@@ -14,3 +20,4 @@ class Command:
     
     def __repr__(self) -> str:
         return self.__str__()
+    

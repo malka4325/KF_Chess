@@ -1,5 +1,5 @@
-from Board import Board
-from Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics, BasePhysics
+from client.Board import Board
+from server.Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics, BasePhysics
 
 
 class PhysicsFactory:

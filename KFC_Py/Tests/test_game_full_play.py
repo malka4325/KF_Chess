@@ -1,9 +1,9 @@
 import pathlib, time
 
-from GraphicsFactory import MockImgFactory
-from Game import Game
+from client.GraphicsFactory import MockImgFactory
+from server.Game import Game
 from Command import Command
-from GameFactory import create_game
+from server.GameFactory import create_game
 
 import numpy as np
 

@@ -1,5 +1,5 @@
 import threading, time
-from KeyboardInput import KeyboardProcessor
+from client.KeyboardInput import KeyboardProcessor
 
 # Use Mock to simulate key events instead of a bespoke FakeEvent.
 from unittest.mock import Mock

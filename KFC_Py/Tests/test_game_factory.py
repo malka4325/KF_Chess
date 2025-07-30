@@ -5,9 +5,9 @@ import pathlib, pytest
 # is completed.
 
 from mock_img import MockImg
-from GraphicsFactory import GraphicsFactory, MockImgFactory
-from GameFactory import create_game
-from Game import Game
+from client.GraphicsFactory import GraphicsFactory, MockImgFactory
+from server.GameFactory import create_game
+from server.Game import Game
 
 # ---------------------------------------------------------------------------
 # Paths

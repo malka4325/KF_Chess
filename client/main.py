@@ -1,7 +1,7 @@
 
 import logging
-from GameFactory import create_game
-from GraphicsFactory import ImgFactory
+from server.GameFactory import create_game
+from client.GraphicsFactory import ImgFactory
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)

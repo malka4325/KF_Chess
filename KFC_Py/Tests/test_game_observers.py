@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Any
 
 # ייבוא המחלקות שנבדקות
-from EventSystem import Publisher, Observer
-from GameObservers import ScoreDisplay, MoveListDisplay, SoundPlayer
-from img import Img # נשתמש ב-Img המקורי עבור ה-Mock של הקנבס
+from client.EventSystem import Publisher, Observer
+from client.GameObservers import ScoreDisplay, MoveListDisplay, SoundPlayer
+from client.img import Img # נשתמש ב-Img המקורי עבור ה-Mock של הקנבס
 
 
 # ──────────────────────────────────────────────────────────────────────────

@@ -1,13 +1,13 @@
 from __future__ import annotations
 from typing import List, Tuple
 from Command import Command
-from Moves import Moves
-from Graphics import Graphics
-from Physics import BasePhysics
+from server.Moves import Moves
+from client.Graphics import Graphics
+from server.Physics import BasePhysics
 from typing import Dict, Callable, Optional
 import time, logging
 
-from Piece import Piece
+from server.Piece import Piece
 
 logger = logging.getLogger(__name__)
 

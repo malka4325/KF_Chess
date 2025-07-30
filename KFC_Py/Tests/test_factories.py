@@ -1,11 +1,11 @@
 import pathlib, numpy as np
 import pytest
-from Board import Board
+from client.Board import Board
 from mock_img import MockImg
-from PhysicsFactory import PhysicsFactory
-from Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics
-from PieceFactory import PieceFactory
-from GraphicsFactory import GraphicsFactory, MockImgFactory
+from server.PhysicsFactory import PhysicsFactory
+from server.Physics import IdlePhysics, MovePhysics, JumpPhysics, RestPhysics
+from server.PieceFactory import PieceFactory
+from client.GraphicsFactory import GraphicsFactory, MockImgFactory
 
 
 # ---------------------------------------------------------------------------

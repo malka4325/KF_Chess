@@ -1,5 +1,5 @@
 import pytest
-from KeyboardInput import KeyboardProcessor
+from client.KeyboardInput import KeyboardProcessor
 
 # Use a simple Mock object to emulate the keyboard event instead of a handcrafted fake.
 from unittest.mock import Mock

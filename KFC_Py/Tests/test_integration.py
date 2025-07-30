@@ -1,15 +1,15 @@
 import pathlib, queue, numpy as np
 from typing import Tuple
 
-from Board import Board
+from client.Board import Board
 from Command import Command
-from Game import Game
-from KeyboardInput import KeyboardProcessor, KeyboardProducer
-from Piece import Piece
-from State import State
-from Physics import IdlePhysics, JumpPhysics
-from Graphics import Graphics
-from GraphicsFactory import MockImgFactory
+from server.Game import Game
+from client.KeyboardInput import KeyboardProcessor, KeyboardProducer
+from server.Piece import Piece
+from server.State import State
+from server.Physics import IdlePhysics, JumpPhysics
+from client.Graphics import Graphics
+from client.GraphicsFactory import MockImgFactory
 from mock_img import MockImg
 
 

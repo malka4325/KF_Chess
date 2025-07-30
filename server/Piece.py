@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from Board import Board
+from client.Board import Board
 from Command import Command
 from typing import Callable, Dict, List, Tuple
 

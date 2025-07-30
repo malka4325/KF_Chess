@@ -1,9 +1,9 @@
 import pathlib
 from typing import Union
-from Board import Board
-from PieceFactory import PieceFactory
-from Game import Game
-from GraphicsFactory import ImgFactory # ודא ש-ImgFactory מיובא
+from client.Board import Board
+from server.PieceFactory import PieceFactory
+from server.Game import Game
+from client.GraphicsFactory import ImgFactory # ודא ש-ImgFactory מיובא
 
 
 # הגדרת גודל התא בפיקסלים, מכאן יגזר גודל הלוח (8*64 = 512)
@@ -34,7 +34,7 @@ def create_game(pieces_root: Union[str, pathlib.Path], img_factory) -> Game:
     # צור את אובייקט ה-Board
     board = Board(CELL_PX, CELL_PX, 8, 8, board_img)
 
-    from GraphicsFactory import GraphicsFactory
+    from client.GraphicsFactory import GraphicsFactory
     gfx_factory = GraphicsFactory(img_factory)
     pf = PieceFactory(board, pieces_root, graphics_factory=gfx_factory)
 

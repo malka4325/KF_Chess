@@ -1,8 +1,8 @@
 import pathlib, numpy as np
 
-from Board import Board
-from Moves import Moves
-from img import Img
+from client.Board import Board
+from server.Moves import Moves
+from client.img import Img
 
 
 # ---------------------------------------------------------------------------

@@ -1,11 +1,11 @@
 import pathlib, tempfile
 from types import SimpleNamespace
 
-from Board import Board
+from client.Board import Board
 from Command import Command
-from Graphics import Graphics
-from GraphicsFactory import MockImgFactory
-from Moves import Moves
+from client.Graphics import Graphics
+from client.GraphicsFactory import MockImgFactory
+from server.Moves import Moves
 from mock_img import MockImg
 
 

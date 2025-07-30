@@ -13,6 +13,7 @@ import json
 import pathlib 
 from collections import deque 
 from typing import List, Dict, Tuple 
+from GameEvent import GameEvent
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.join(current_dir, 'KFC_Py')
@@ -27,16 +28,16 @@ sys.modules['keyboard'] = MockKeyboard()
 print("Module 'keyboard' successfully mocked.")
 
 
-from Game import Game
-from Board import Board
-from PieceFactory import PieceFactory 
-from GraphicsFactory import GraphicsFactory 
-from EventSystem import Publisher, Observer 
+from server.Game import Game
+from client.Board import Board
+from server.PieceFactory import PieceFactory 
+# from client.GraphicsFactory import GraphicsFactory 
+# from client.EventSystem import Publisher, Observer 
 from Command import Command 
 from ServerGameObserver import ServerGameObserver
 
 from mock_img import mock_graphics_image_loader 
-from GameFactory import create_game 
+from server.GameFactory import create_game 
 
 class MockImgFactory:
     def __init__(self):

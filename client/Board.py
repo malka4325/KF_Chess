@@ -1,7 +1,7 @@
 from typing import Tuple
 from dataclasses import dataclass
 import json
-from img import Img
+from client.img import Img
 
 @dataclass
 class Board:
